@@ -16,7 +16,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# 只忽略Python的lib目录，不忽略web/src/lib
+# lib/
 lib64/
 parts/
 sdist/
