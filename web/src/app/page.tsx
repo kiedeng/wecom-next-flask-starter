@@ -1,11 +1,45 @@
 'use client';
 
+import { useEffect } from 'react';
 import { WeChatStatus } from '@/components/WeChatStatus';
 import { UserInfo } from '@/components/UserInfo';
 import { SharePanel } from '@/components/SharePanel';
 import { MessageSender } from '@/components/MessageSender';
+import { DebugInfo } from '@/components/DebugInfo';
 
 export default function Home() {
+  // 全局弹窗防护
+  useEffect(() => {
+    // 重写alert和confirm，防止企业微信弹窗
+    const originalAlert = window.alert;
+    const originalConfirm = window.confirm;
+    
+    window.alert = (message: string) => {
+      console.log('被阻止的alert:', message);
+      // 不显示弹窗，只在控制台记录
+    };
+    
+    window.confirm = (message?: string) => {
+      console.log('被阻止的confirm:', message);
+      return false; // 默认返回false
+    };
+
+    // 监听企业微信错误，防止弹窗
+    if (typeof window !== 'undefined' && window.wx) {
+      const originalError = window.wx.error;
+      window.wx.error = (res: any) => {
+        console.error('企业微信JS-SDK错误:', res);
+        // 不调用原始错误处理，避免弹窗
+      };
+    }
+
+    // 清理函数
+    return () => {
+      window.alert = originalAlert;
+      window.confirm = originalConfirm;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -89,6 +123,9 @@ export default function Home() {
           </div>
         </div>
       </div>
+      
+      {/* 调试信息组件 */}
+      <DebugInfo />
     </div>
   );
 }

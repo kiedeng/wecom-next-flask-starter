@@ -57,13 +57,48 @@ export function useWeChat(): UseWeChatReturn {
 
     try {
       // 获取当前页面URL
-      const currentUrl = typeof window !== 'undefined' ? window.location.href.split('#')[0] : '';
+      let currentUrl = typeof window !== 'undefined' ? window.location.href.split('#')[0] : '';
+      
+      // 调试信息 - 同时显示在控制台和页面上
+      const debugInfo = {
+        '当前页面完整URL': window.location.href,
+        '处理后用于签名的URL': currentUrl,
+        'URL参数': Object.fromEntries(new URLSearchParams(window.location.search)),
+        '页面路径': window.location.pathname,
+        '页面查询参数': window.location.search,
+        '页面hash': window.location.hash
+      };
+      
+      console.log('=== 前端URL调试信息 ===');
+      console.log('当前页面完整URL:', window.location.href);
+      console.log('处理后用于签名的URL:', currentUrl);
+      console.log('URL参数:', new URLSearchParams(window.location.search));
+      console.log('页面路径:', window.location.pathname);
+      console.log('页面查询参数:', window.location.search);
+      console.log('页面hash:', window.location.hash);
+      
+      // 将调试信息存储到全局变量，方便在页面上显示
+      (window as any).wechatDebugInfo = debugInfo;
+      
+      // 确保URL格式正确
+      try {
+        const urlObj = new URL(currentUrl);
+        // 移除不必要的参数，只保留必要的查询参数
+        const cleanUrl = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
+        console.log('清理后的URL:', cleanUrl);
+        currentUrl = cleanUrl;
+      } catch (e) {
+        console.warn('URL解析失败，使用原始URL:', e);
+      }
+      
+      console.log('最终发送给后端的URL:', currentUrl);
+      console.log('=== 前端调试信息结束 ===');
       
       // 获取企业微信配置
       const configResponse = await wechatAPI.getConfig(currentUrl);
       
-      if (!configResponse.success) {
-        throw new Error(configResponse.error || '获取企业微信配置失败');
+      if (!(configResponse as any).success) {
+        throw new Error((configResponse as any).error || '获取企业微信配置失败');
       }
 
       const config: WeChatConfig = configResponse.data;
@@ -77,8 +112,14 @@ export function useWeChat(): UseWeChatReturn {
       console.log('企业微信SDK初始化成功');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'SDK初始化失败';
-      setError(errorMessage);
       console.error('企业微信SDK初始化失败:', err);
+      
+      // 静默处理错误，不显示错误状态，让应用继续运行
+      // setError(errorMessage);
+      
+      // 设置一个静默失败状态，但不阻止应用运行
+      setIsConfigLoaded(false);
+      setIsSDKReady(false);
     } finally {
       setLoading(false);
     }
@@ -104,8 +145,8 @@ export function useWeChat(): UseWeChatReturn {
 
       const response = await wechatAPI.getUserInfo(authCode);
       
-      if (!response.success) {
-        throw new Error(response.error || '获取用户信息失败');
+      if (!(response as any).success) {
+        throw new Error((response as any).error || '获取用户信息失败');
       }
 
       setUserInfo(response.data);
@@ -185,6 +226,8 @@ export function useWeChat(): UseWeChatReturn {
       initSDK().then(() => {
         getUserInfo(code);
       });
+    } else if ( !code) {
+      initSDK();
     }
   }, [isInWeChat, initSDK, getUserInfo, userInfo]);
 

@@ -20,7 +20,8 @@ export function WeChatStatus() {
     );
   }
 
-  if (error) {
+  // 只在非企业微信环境中显示错误
+  if (error && !isInWeChat) {
     return (
       <Alert variant="destructive">
         <XCircle className="h-5 w-5" />
@@ -32,11 +33,6 @@ export function WeChatStatus() {
             <Button size="sm" variant="outline" onClick={clearError}>
               清除错误
             </Button>
-            {isInWeChat && (
-              <Button size="sm" onClick={initSDK}>
-                重新初始化
-              </Button>
-            )}
           </div>
         </div>
       </Alert>
@@ -71,6 +67,18 @@ export function WeChatStatus() {
         <Loader2 className="h-5 w-5 animate-spin" />
         <AlertDescription>
           企业微信SDK初始化中...
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // 如果SDK配置失败，显示一个友好的提示而不是错误
+  if (!isConfigLoaded && isInWeChat) {
+    return (
+      <Alert variant="warning">
+        <Smartphone className="h-5 w-5" />
+        <AlertDescription>
+          企业微信功能暂时不可用，但您可以正常使用其他功能
         </AlertDescription>
       </Alert>
     );

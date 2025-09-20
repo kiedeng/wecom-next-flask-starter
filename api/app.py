@@ -76,7 +76,7 @@ class WeChatWorkSDK:
         jsapi_ticket = self.get_jsapi_ticket()
         
         # 生成签名参数
-        timestamp = str(int(time.time()))
+        timestamp = int(time.time())
         nonce_str = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
         
         # 生成签名字符串
@@ -186,13 +186,49 @@ def index():
 def get_wechat_config():
     """获取企业微信JS-SDK配置"""
     try:
-        url = request.args.get('url', request.url_root.rstrip('/'))
+        # 获取前端传递的URL，如果没有则使用默认值
+        url = request.args.get('url')
+        referer = request.headers.get('Referer', '')
+        request_url = request.url
+        
+        print(f"=== 企业微信配置调试信息 ===")
+        print(f"请求URL参数: {url}")
+        print(f"Referer头: {referer}")
+        print(f"当前请求URL: {request_url}")
+        print(f"请求头信息: {dict(request.headers)}")
+        
+        if not url:
+            # 如果没有传递URL，使用请求的referer或默认值
+            url = referer or request.url_root.rstrip('/')
+        
+        # 确保URL格式正确（移除fragment部分）
+        if '#' in url:
+            url = url.split('#')[0]
+        
+        # 清理URL，移除不必要的查询参数
+        try:
+            from urllib.parse import urlparse, urlunparse
+            parsed = urlparse(url)
+            # 只保留协议、域名和路径，移除查询参数和fragment
+            clean_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', '', ''))
+            print(f"清理后的URL: {clean_url}")
+            url = clean_url
+        except Exception as e:
+            print(f"URL清理失败: {e}")
+        
+        print(f"最终用于生成签名的URL: {url}")
+        
         signature_config = wechat_sdk.generate_jsapi_signature(url)
+        
+        print(f"生成的配置: {signature_config}")
+        print(f"=== 调试信息结束 ===")
+        
         return jsonify({
             'success': True,
             'data': signature_config
         })
     except Exception as e:
+        print(f"配置生成失败: {str(e)}")  # 调试日志
         return jsonify({
             'success': False,
             'error': str(e)
@@ -312,6 +348,31 @@ def health_check():
             'status': 'unhealthy',
             'error': str(e),
             'timestamp': int(time.time())
+        }), 500
+
+@app.route('/api/debug/info')
+def get_debug_info():
+    """获取调试信息接口"""
+    try:
+        # 获取最近的企业微信配置请求信息
+        debug_data = {
+            'timestamp': int(time.time()),
+            'message': '调试信息接口正常',
+            'tips': [
+                '查看后端终端日志获取详细调试信息',
+                '前端调试信息会在页面上显示',
+                '确保前后端URL一致'
+            ]
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': debug_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
         }), 500
 
 @app.errorhandler(404)
