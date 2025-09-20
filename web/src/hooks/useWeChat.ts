@@ -222,11 +222,15 @@ export function useWeChat(): UseWeChatReturn {
   // 自动初始化（如果URL中有code参数）
   useEffect(() => {
     const code = getUrlParam('code');
+    console.log('检查URL中的code参数:', code);
+    
     if (isInWeChat && code && !userInfo) {
+      console.log('发现code参数，开始初始化SDK并获取用户信息');
       initSDK().then(() => {
         getUserInfo(code);
       });
-    } else if ( !code) {
+    } else if (isInWeChat && !code) {
+      console.log('没有code参数，只初始化SDK');
       initSDK();
     }
   }, [isInWeChat, initSDK, getUserInfo, userInfo]);

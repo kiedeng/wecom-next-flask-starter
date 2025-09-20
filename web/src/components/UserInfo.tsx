@@ -68,21 +68,7 @@ export function UserInfo() {
     );
   }
 
-  if (!userInfo) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>用户信息</CardTitle>
-          <CardDescription>点击按钮获取您的用户信息</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button onClick={handleGetUserInfo}>
-            获取用户信息
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+  
 
   return (
     <Card>
