@@ -11,8 +11,14 @@ interface DebugInfo {
 }
 
 export function DebugInfo() {
+  // 只在开发环境显示调试信息
+  if (process.env.NODE_ENV !== 'development') {
+    return null;
+  }
+
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [isClosed, setIsClosed] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -50,13 +56,16 @@ export function DebugInfo() {
     }
   };
 
-  if (!debugInfo && !isVisible) {
+  if (!debugInfo || !isVisible || isClosed) {
     return (
       <div className="fixed bottom-4 right-4 z-[9999]">
         <Button
           size="sm"
           variant="outline"
-          onClick={() => setIsVisible(true)}
+          onClick={() => {
+            setIsVisible(true);
+            setIsClosed(false);
+          }}
           className="bg-yellow-100 border-yellow-300 text-yellow-800 hover:bg-yellow-200 shadow-lg"
         >
           <Bug className="h-4 w-4 mr-2" />
@@ -94,7 +103,7 @@ export function DebugInfo() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setIsVisible(false)}
+              onClick={() => setIsClosed(true)}
               className="h-8 w-8 p-0"
             >
               ×
