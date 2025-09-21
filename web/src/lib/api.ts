@@ -11,10 +11,26 @@ const api = axios.create({
   },
 });
 
+// 全局授权码存储
+let globalAuthCode: string | null = null;
+
+// 设置授权码
+export const setAuthCode = (code: string) => {
+  globalAuthCode = code;
+};
+
+// 获取授权码
+export const getAuthCode = () => {
+  return globalAuthCode;
+};
+
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
-    // 可以在这里添加认证token等
+    // 自动添加授权码到请求头
+    if (globalAuthCode) {
+      config.headers['X-WeChat-Code'] = globalAuthCode;
+    }
     return config;
   },
   (error) => {
@@ -49,9 +65,9 @@ export const wechatAPI = {
     return api.get('/api/oauth/url', { params });
   },
 
-  // 获取用户信息
-  getUserInfo: (code: string) => {
-    return api.get('/api/user/info', { params: { code } });
+  // 获取用户信息（不再需要传递code参数，会自动从请求头获取）
+  getUserInfo: () => {
+    return api.get('/api/user/info');
   },
 
   // 发送消息

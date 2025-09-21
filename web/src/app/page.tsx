@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useWeChat } from '@/hooks/useWeChat';
+import { setAuthCode } from '@/lib/api';
+import { WeComRequired } from '@/components/WeComRequired';
 import { WeChatStatus } from '@/components/WeChatStatus';
 import { UserInfo } from '@/components/UserInfo';
 import { SharePanel } from '@/components/SharePanel';
@@ -8,6 +11,45 @@ import { MessageSender } from '@/components/MessageSender';
 import { DebugInfo } from '@/components/DebugInfo';
 
 export default function Home() {
+  const { 
+    isInWeChat, 
+    isWeChat, 
+    showWeComRequired, 
+    authCode, 
+    setShowWeComRequired 
+  } = useWeChat();
+
+  console.log('isInWeChat', authCode);
+
+  // 设置授权码到API客户端
+  useEffect(() => {
+    if (authCode) {
+      setAuthCode(authCode);
+    }
+  }, [authCode]);
+
+  // 如果检测到不在企业微信中，显示提示页面
+  if (showWeComRequired) {
+    return (
+      <WeComRequired 
+        isWeChat={isWeChat}
+        onRetry={() => setShowWeComRequired(false)}
+      />
+    );
+  }
+
+  // 如果还在检测中，显示加载状态
+  if (!isInWeChat) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">正在检测客户端...</p>
+        </div>
+      </div>
+    );
+  }
+
   // 全局弹窗防护
   useEffect(() => {
     // 重写alert和confirm，防止企业微信弹窗

@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, redirect, render_template
 from flask_cors import CORS
+from flask_login import LoginManager, UserMixin, login_required, current_user
 import requests
 import hashlib
 import time
@@ -13,6 +14,13 @@ from config import Config
 load_dotenv()
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# 初始化 Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
 CORS(app)  # 启用CORS支持
 
 # 企业微信配置
@@ -20,6 +28,35 @@ CORP_ID = os.getenv('CORP_ID')  # 企业ID
 CORP_SECRET = os.getenv('CORP_SECRET')  # 应用Secret
 AGENT_ID = os.getenv('AGENT_ID')  # 应用ID
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+
+class User(UserMixin):
+    """用户模型"""
+    def __init__(self, user_id, user_info=None):
+        self.id = user_id
+        self.user_info = user_info or {}
+
+@login_manager.request_loader
+def load_user_from_request(request):
+    """从请求头中获取 code 并验证用户身份"""
+    # 从 Header 中获取 code
+    code = request.headers.get('X-WeChat-Code')
+    
+    if not code:
+        return None
+    
+    try:
+        # 使用 code 获取用户信息
+        user_info = wechat_sdk.get_user_info(code)
+        
+        if user_info.get('UserId'):
+            # 创建用户对象
+            user = User(user_info['UserId'], user_info)
+            return user
+    except Exception as e:
+        print(f"用户验证失败: {str(e)}")
+        return None
+    
+    return None
 
 class WeChatWorkSDK:
     def __init__(self, corp_id, corp_secret, agent_id):
@@ -235,23 +272,13 @@ def get_wechat_config():
         }), 500
 
 @app.route('/api/user/info')
+@login_required
 def get_user_info():
-    """获取用户信息（需要先进行OAuth授权）"""
-    code = request.args.get('code')
-    if not code:
-        return jsonify({'success': False, 'error': '缺少授权码'}), 400
-    
+    """获取当前登录用户信息"""
     try:
-        user_info = wechat_sdk.get_user_info(code)
-        
-        # 如果有用户ID，获取详细信息
-        if user_info.get('UserId'):
-            try:
-                user_detail = wechat_sdk.get_user_detail(user_info['UserId'])
-                user_info.update(user_detail)
-            except Exception as e:
-                # 获取详细信息失败不影响基本信息
-                pass
+        # 获取详细信息
+        user_detail = wechat_sdk.get_user_detail(current_user.id)
+        user_info = {**current_user.user_info, **user_detail}
         
         return jsonify({
             'success': True,
@@ -303,6 +330,7 @@ def oauth_callback():
         }), 400
 
 @app.route('/api/send/message', methods=['POST'])
+@login_required
 def send_message():
     """发送消息到企业微信"""
     try:
@@ -374,6 +402,22 @@ def get_debug_info():
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/api/auth/status')
+def auth_status():
+    """检查用户登录状态"""
+    if current_user.is_authenticated:
+        return jsonify({
+            'success': True,
+            'authenticated': True,
+            'user_id': current_user.id,
+            'user_info': current_user.user_info
+        })
+    else:
+        return jsonify({
+            'success': True,
+            'authenticated': False
+        })
 
 @app.errorhandler(404)
 def not_found(error):

@@ -12,6 +12,7 @@ export function UserInfo() {
 
   const handleGetUserInfo = async () => {
     try {
+      // 不再需要传递code参数，API会自动从请求头获取
       await getUserInfo();
     } catch (err) {
       console.error('获取用户信息失败:', err);

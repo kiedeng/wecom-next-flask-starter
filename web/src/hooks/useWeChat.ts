@@ -8,11 +8,14 @@ import { isInWeChatWork, getUrlParam } from '@/lib/utils';
 export interface UseWeChatReturn {
   // 状态
   isInWeChat: boolean;
+  isWeChat: boolean;
   isSDKReady: boolean;
   isConfigLoaded: boolean;
   userInfo: WeChatUserInfo | null;
   loading: boolean;
   error: string | null;
+  showWeComRequired: boolean;
+  authCode: string | null;
 
   // 方法
   initSDK: () => Promise<void>;
@@ -30,19 +33,34 @@ export interface UseWeChatReturn {
   }) => Promise<void>;
   closeWindow: () => void;
   clearError: () => void;
+  setAuthCode: (code: string) => void;
+  setShowWeComRequired: (show: boolean) => void;
 }
 
 export function useWeChat(): UseWeChatReturn {
   const [isInWeChat, setIsInWeChat] = useState(false);
+  const [isWeChat, setIsWeChat] = useState(false);
   const [isSDKReady, setIsSDKReady] = useState(false);
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   const [userInfo, setUserInfo] = useState<WeChatUserInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showWeComRequired, setShowWeComRequired] = useState(false);
+  const [authCode, setAuthCode] = useState<string | null>(null);
 
-  // 检查是否在企业微信环境中
+  // 检查客户端类型
   useEffect(() => {
-    setIsInWeChat(isInWeChatWork());
+    const ua = navigator.userAgent.toLowerCase();
+    const isWeComClient = ua.indexOf('wxwork') !== -1;
+    const isWeChatClient = ua.indexOf('micromessenger') !== -1;
+    
+    setIsInWeChat(isWeComClient);
+    setIsWeChat(isWeChatClient);
+    
+    // 如果不在企业微信中，显示提示页面
+    if (!isWeComClient) {
+      setShowWeComRequired(true);
+    }
   }, []);
 
   // 初始化SDK
@@ -126,7 +144,7 @@ export function useWeChat(): UseWeChatReturn {
   }, [isInWeChat]);
 
   // 获取用户信息
-  const getUserInfo = useCallback(async (code?: string) => {
+  const getUserInfo = useCallback(async () => {
     if (!isInWeChat) {
       setError('不在企业微信环境中');
       return;
@@ -136,14 +154,8 @@ export function useWeChat(): UseWeChatReturn {
     setError(null);
 
     try {
-      // 如果没有提供code，尝试从URL参数获取
-      const authCode = code || getUrlParam('code');
-      
-      if (!authCode) {
-        throw new Error('缺少授权码');
-      }
-
-      const response = await wechatAPI.getUserInfo(authCode);
+      // 不再需要传递code参数，API会自动从请求头获取
+      const response = await wechatAPI.getUserInfo();
       
       if (!(response as any).success) {
         throw new Error((response as any).error || '获取用户信息失败');
@@ -219,30 +231,38 @@ export function useWeChat(): UseWeChatReturn {
     setError(null);
   }, []);
 
-  // 自动初始化（如果URL中有code参数）
+  // 自动授权流程
   useEffect(() => {
+    if (!isInWeChat) return;
+    
     const code = getUrlParam('code');
     console.log('检查URL中的code参数:', code);
     
-    if (isInWeChat && code && !userInfo) {
+    if (code) {
+      // 有code，设置授权码并获取用户信息
+      setAuthCode(code);
       console.log('发现code参数，开始初始化SDK并获取用户信息');
       initSDK().then(() => {
-        getUserInfo(code);
+        getUserInfo();
       });
-    } else if (isInWeChat && !code) {
-      console.log('没有code参数，只初始化SDK');
-      initSDK();
+    } else {
+      // 没有code，自动跳转到授权页面
+      console.log('没有code参数，自动跳转到授权页面');
+      window.location.href = '/api/oauth/url';
     }
-  }, [isInWeChat, initSDK, getUserInfo, userInfo]);
+  }, [isInWeChat, initSDK, getUserInfo]);
 
   return {
     // 状态
     isInWeChat,
+    isWeChat,
     isSDKReady,
     isConfigLoaded,
     userInfo,
     loading,
     error,
+    showWeComRequired,
+    authCode,
 
     // 方法
     initSDK,
@@ -251,5 +271,7 @@ export function useWeChat(): UseWeChatReturn {
     shareToTimeline,
     closeWindow,
     clearError,
+    setAuthCode,
+    setShowWeComRequired,
   };
 }
