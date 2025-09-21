@@ -1,15 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useWeChat } from '@/hooks/useWeChat';
+import { UseWeChatReturn } from '@/hooks/useWeChat';
 import { wechatAPI } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { Send, Loader2 } from 'lucide-react';
 
-export function MessageSender() {
-  const { userInfo } = useWeChat();
+interface MessageSenderProps {
+  wechatData: UseWeChatReturn;
+}
+
+export function MessageSender({ wechatData }: MessageSenderProps) {
+  const { userInfo } = wechatData;
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'text' | 'markdown'>('text');
   const [loading, setLoading] = useState(false);

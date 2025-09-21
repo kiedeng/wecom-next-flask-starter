@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { UseWeChatReturn } from '@/hooks/useWeChat';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
@@ -10,7 +11,11 @@ interface DebugInfo {
   [key: string]: any;
 }
 
-export function DebugInfo() {
+interface DebugInfoProps {
+  wechatData?: UseWeChatReturn;
+}
+
+export function DebugInfo({ wechatData }: DebugInfoProps) {
   // 只在开发环境显示调试信息
   if (process.env.NODE_ENV !== 'development') {
     return null;
@@ -56,7 +61,20 @@ export function DebugInfo() {
     }
   };
 
-  if (!debugInfo || !isVisible || isClosed) {
+  // 合并wechatData和window调试信息
+  const combinedDebugInfo = {
+    wechatData: wechatData || null,
+    windowDebugInfo: debugInfo,
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      API_BASE_URL: process.env.NEXT_PUBLIC_API_URL,
+      userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'SSR',
+    }
+  };
+
+  // 如果没有调试信息且不可见或已关闭，显示按钮
+  if (!debugInfo && !isVisible || isClosed) {
     return (
       <div className="fixed bottom-4 right-4 z-[9999]">
         <Button
@@ -110,7 +128,7 @@ export function DebugInfo() {
             </Button>
           </div>
         </div>
-        
+
         {copied && (
           <Alert className="mb-3">
             <AlertDescription className="text-green-600">
@@ -118,9 +136,9 @@ export function DebugInfo() {
             </AlertDescription>
           </Alert>
         )}
-        
+
         <div className="space-y-2 text-sm">
-          {debugInfo && Object.entries(debugInfo).map(([key, value]) => (
+          {Object.entries(combinedDebugInfo).map(([key, value]) => (
             <div key={key} className="border-b border-yellow-200 pb-2">
               <div className="font-medium text-yellow-700">{key}:</div>
               <div className="text-yellow-600 break-all">
@@ -129,7 +147,7 @@ export function DebugInfo() {
             </div>
           ))}
         </div>
-        
+
         <div className="mt-3 text-xs text-yellow-600">
           提示：点击复制按钮将调试信息复制到剪贴板，然后可以发送给开发者
         </div>

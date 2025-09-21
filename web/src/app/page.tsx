@@ -12,7 +12,8 @@ import { DebugInfo } from '@/components/DebugInfo';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 function HomeContent() {
-  // Hooks必须在组件顶层调用，不能在try-catch中
+  // 只在顶层组件调用useWeChat hook
+  const wechatData = useWeChat();
   const { 
     isInWeChat, 
     isWeChat, 
@@ -20,7 +21,7 @@ function HomeContent() {
     authCode, 
     setShowWeComRequired,
     error
-  } = useWeChat();
+  } = wechatData;
 
   // 调试信息
   console.log('isInWeChat', authCode);
@@ -33,6 +34,38 @@ function HomeContent() {
       setAuthCode(authCode);
     }
   }, [authCode]);
+
+  // 全局弹窗防护
+  useEffect(() => {
+    // 重写alert和confirm，防止企业微信弹窗
+    const originalAlert = window.alert;
+    const originalConfirm = window.confirm;
+    
+    window.alert = (message: string) => {
+      console.log('被阻止的alert:', message);
+      // 不显示弹窗，只在控制台记录
+    };
+    
+    window.confirm = (message?: string) => {
+      console.log('被阻止的confirm:', message);
+      return false; // 默认返回false
+    };
+
+    // 监听企业微信错误，防止弹窗
+    if (typeof window !== 'undefined' && window.wx) {
+      const originalError = window.wx.error;
+      window.wx.error = (res: any) => {
+        console.error('企业微信JS-SDK错误:', res);
+        // 不调用原始错误处理，避免弹窗
+      };
+    }
+
+    // 清理函数
+    return () => {
+      window.alert = originalAlert;
+      window.confirm = originalConfirm;
+    };
+  }, []);
 
   // 如果有错误，显示错误页面
   if (error) {
@@ -74,38 +107,6 @@ function HomeContent() {
     );
   }
 
-  // 全局弹窗防护
-  useEffect(() => {
-    // 重写alert和confirm，防止企业微信弹窗
-    const originalAlert = window.alert;
-    const originalConfirm = window.confirm;
-    
-    window.alert = (message: string) => {
-      console.log('被阻止的alert:', message);
-      // 不显示弹窗，只在控制台记录
-    };
-    
-    window.confirm = (message?: string) => {
-      console.log('被阻止的confirm:', message);
-      return false; // 默认返回false
-    };
-
-    // 监听企业微信错误，防止弹窗
-    if (typeof window !== 'undefined' && window.wx) {
-      const originalError = window.wx.error;
-      window.wx.error = (res: any) => {
-        console.error('企业微信JS-SDK错误:', res);
-        // 不调用原始错误处理，避免弹窗
-      };
-    }
-
-    // 清理函数
-    return () => {
-      window.alert = originalAlert;
-      window.confirm = originalConfirm;
-    };
-  }, []);
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -119,26 +120,34 @@ function HomeContent() {
         </div>
 
         <div className="space-y-6">
-          {/* 企业微信状态 */}
-          <WeChatStatus />
+          {/* 企业微信状态 - 传递wechatData */}
+          <ErrorBoundary>
+            <WeChatStatus wechatData={wechatData} />
+          </ErrorBoundary>
 
           {/* 主要内容区域 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* 用户信息 */}
+            {/* 用户信息 - 传递wechatData */}
             <div className="lg:col-span-1">
-              <UserInfo />
+              <ErrorBoundary>
+                <UserInfo wechatData={wechatData} />
+              </ErrorBoundary>
             </div>
 
-            {/* 消息发送 */}
+            {/* 消息发送 - 传递wechatData */}
             <div className="lg:col-span-1">
-              <MessageSender />
+              <ErrorBoundary>
+                <MessageSender wechatData={wechatData} />
+              </ErrorBoundary>
             </div>
           </div>
 
-          {/* 分享功能 */}
+          {/* 分享功能 - 传递wechatData */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="lg:col-span-2">
-              <SharePanel />
+              <ErrorBoundary>
+                <SharePanel wechatData={wechatData} />
+              </ErrorBoundary>
             </div>
           </div>
 
@@ -190,8 +199,8 @@ function HomeContent() {
         </div>
       </div>
       
-      {/* 调试信息组件 */}
-      <DebugInfo />
+      {/* 调试信息组件 - 传递wechatData */}
+      <DebugInfo wechatData={wechatData} />
     </div>
   );
 }

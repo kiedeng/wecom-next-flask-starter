@@ -55,36 +55,30 @@ export function useWeChat(): UseWeChatReturn {
   const [showWeComRequired, setShowWeComRequired] = useState(false);
   const [authCode, setAuthCode] = useState<string | null>(null);
 
-  // 检测企业微信环境
+  // 检测企业微信环境 - 移除setTimeout，直接执行
   useEffect(() => {
-    const checkEnvironment = () => {
-      try {
-        // 确保在浏览器环境中
-        if (typeof window === 'undefined' || typeof navigator === 'undefined') {
-          console.log('服务端渲染环境，跳过环境检测');
-          return;
-        }
-
-        const inWeChat = isInWeChatWork();
-        const isWeChatBrowser = /micromessenger/i.test(navigator.userAgent);
-        
-        console.log('企业微信环境检测:', { inWeChat, isWeChatBrowser });
-        
-        setIsInWeChat(inWeChat);
-        setIsWeChat(isWeChatBrowser);
-        
-        if (!inWeChat && !isWeChatBrowser) {
-          setShowWeComRequired(true);
-        }
-      } catch (err) {
-        console.error('环境检测失败:', err);
-        setError('环境检测失败');
+    try {
+      // 确保在浏览器环境中
+      if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+        console.log('服务端渲染环境，跳过环境检测');
+        return;
       }
-    };
 
-    // 延迟执行，确保在客户端环境中
-    const timer = setTimeout(checkEnvironment, 0);
-    return () => clearTimeout(timer);
+      const inWeChat = isInWeChatWork();
+      const isWeChatBrowser = /micromessenger/i.test(navigator.userAgent);
+      
+      console.log('企业微信环境检测:', { inWeChat, isWeChatBrowser });
+      
+      setIsInWeChat(inWeChat);
+      setIsWeChat(isWeChatBrowser);
+      
+      if (!inWeChat && !isWeChatBrowser) {
+        setShowWeComRequired(true);
+      }
+    } catch (err) {
+      console.error('环境检测失败:', err);
+      setError('环境检测失败');
+    }
   }, []);
 
   // 初始化企业微信SDK

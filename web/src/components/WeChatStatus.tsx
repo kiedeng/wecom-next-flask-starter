@@ -1,13 +1,17 @@
 'use client';
 
 import React from 'react';
-import { useWeChat } from '@/hooks/useWeChat';
+import { UseWeChatReturn } from '@/hooks/useWeChat';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { CheckCircle, XCircle, Loader2, Smartphone } from 'lucide-react';
 
-export function WeChatStatus() {
-  const { isInWeChat, isSDKReady, isConfigLoaded, loading, error, initSDK, clearError } = useWeChat();
+interface WeChatStatusProps {
+  wechatData: UseWeChatReturn;
+}
+
+export function WeChatStatus({ wechatData }: WeChatStatusProps) {
+  const { isInWeChat, isSDKReady, isConfigLoaded, loading, error, initSDK, clearError } = wechatData;
 
   if (loading) {
     return (

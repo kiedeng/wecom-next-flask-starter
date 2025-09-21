@@ -1,14 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useWeChat } from '@/hooks/useWeChat';
+import { UseWeChatReturn } from '@/hooks/useWeChat';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { Share2, MessageCircle, Users, Loader2 } from 'lucide-react';
 
-export function SharePanel() {
-  const { isSDKReady, shareToChat, shareToTimeline } = useWeChat();
+interface SharePanelProps {
+  wechatData: UseWeChatReturn;
+}
+
+export function SharePanel({ wechatData }: SharePanelProps) {
+  const { isSDKReady, shareToChat, shareToTimeline } = wechatData;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);

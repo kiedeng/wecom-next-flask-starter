@@ -1,14 +1,18 @@
 'use client';
 
 import React from 'react';
-import { useWeChat } from '@/hooks/useWeChat';
+import { UseWeChatReturn } from '@/hooks/useWeChat';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { User, Mail, Phone, Building, MapPin, Loader2 } from 'lucide-react';
 
-export function UserInfo() {
-  const { userInfo, loading, error, getUserInfo, isInWeChat } = useWeChat();
+interface UserInfoProps {
+  wechatData: UseWeChatReturn;
+}
+
+export function UserInfo({ wechatData }: UserInfoProps) {
+  const { userInfo, loading, error, getUserInfo, isInWeChat } = wechatData;
 
   const handleGetUserInfo = async () => {
     try {
@@ -79,7 +83,7 @@ export function UserInfo() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {userInfo.UserId && (
+          {userInfo?.UserId && (
             <div className="flex items-center space-x-3">
               <User className="h-5 w-5 text-gray-500" />
               <div>
@@ -89,7 +93,7 @@ export function UserInfo() {
             </div>
           )}
           
-          {userInfo.name && (
+          {userInfo?.name && (
             <div className="flex items-center space-x-3">
               <User className="h-5 w-5 text-gray-500" />
               <div>
@@ -99,7 +103,7 @@ export function UserInfo() {
             </div>
           )}
           
-          {userInfo.mobile && (
+          {userInfo?.mobile && (
             <div className="flex items-center space-x-3">
               <Phone className="h-5 w-5 text-gray-500" />
               <div>
@@ -109,7 +113,7 @@ export function UserInfo() {
             </div>
           )}
           
-          {userInfo.email && (
+          {userInfo?.email && (
             <div className="flex items-center space-x-3">
               <Mail className="h-5 w-5 text-gray-500" />
               <div>
@@ -119,7 +123,7 @@ export function UserInfo() {
             </div>
           )}
           
-          {userInfo.position && (
+          {userInfo?.position && (
             <div className="flex items-center space-x-3">
               <Building className="h-5 w-5 text-gray-500" />
               <div>
@@ -129,7 +133,7 @@ export function UserInfo() {
             </div>
           )}
           
-          {userInfo.department && userInfo.department.length > 0 && (
+          {userInfo?.department && userInfo.department.length > 0 && (
             <div className="flex items-center space-x-3">
               <MapPin className="h-5 w-5 text-gray-500" />
               <div>

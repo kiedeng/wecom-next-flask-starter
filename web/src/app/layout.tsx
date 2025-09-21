@@ -17,7 +17,11 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <head>
-        <script src="https://res.wx.qq.com/open/js/jweixin-1.2.0.js"></script>
+        {/* 企业微信JS-SDK - 只在客户端加载，避免重复加载 */}
+        <script 
+          src="https://res.wx.qq.com/open/js/jweixin-1.2.0.js"
+          async
+        />
       </head>
       <body className={inter.className}>
         {children}
