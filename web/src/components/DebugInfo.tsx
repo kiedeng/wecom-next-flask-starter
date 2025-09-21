@@ -94,9 +94,9 @@ export function DebugInfo({ wechatData }: DebugInfoProps) {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] max-w-md">
-      <Card className="p-4 bg-yellow-50 border-yellow-200">
-        <div className="flex items-center justify-between mb-3">
+    <div className="fixed bottom-4 right-4 z-[9999] max-w-md max-h-[70vh]">
+      <Card className="p-4 bg-yellow-50 border-yellow-200 flex flex-col h-full">
+        <div className="flex items-center justify-between mb-3 flex-shrink-0">
           <div className="flex items-center">
             <Bug className="h-4 w-4 mr-2 text-yellow-600" />
             <h3 className="font-semibold text-yellow-800">调试信息</h3>
@@ -130,25 +130,26 @@ export function DebugInfo({ wechatData }: DebugInfoProps) {
         </div>
 
         {copied && (
-          <Alert className="mb-3">
+          <Alert className="mb-3 flex-shrink-0">
             <AlertDescription className="text-green-600">
               调试信息已复制到剪贴板
             </AlertDescription>
           </Alert>
         )}
 
-        <div className="space-y-2 text-sm">
+        {/* 可滚动的内容区域 */}
+        <div className="flex-1 overflow-y-auto space-y-2 text-sm min-h-0 pr-2">
           {Object.entries(combinedDebugInfo).map(([key, value]) => (
             <div key={key} className="border-b border-yellow-200 pb-2">
               <div className="font-medium text-yellow-700">{key}:</div>
-              <div className="text-yellow-600 break-all">
+              <div className="text-yellow-600 break-all whitespace-pre-wrap">
                 {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-3 text-xs text-yellow-600">
+        <div className="mt-3 text-xs text-yellow-600 flex-shrink-0">
           提示：点击复制按钮将调试信息复制到剪贴板，然后可以发送给开发者
         </div>
       </Card>
