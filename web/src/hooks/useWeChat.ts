@@ -5,6 +5,13 @@ import { wechatAPI } from '@/lib/api';
 import { wechatSDK, WeChatConfig, WeChatUserInfo } from '@/lib/wechat';
 import { isInWeChatWork, getUrlParam } from '@/lib/utils';
 
+// API响应类型定义
+interface APIResponse<T = any> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
 export interface UseWeChatReturn {
   // 状态
   isInWeChat: boolean;
@@ -48,129 +55,116 @@ export function useWeChat(): UseWeChatReturn {
   const [showWeComRequired, setShowWeComRequired] = useState(false);
   const [authCode, setAuthCode] = useState<string | null>(null);
 
-  // 检查客户端类型
+  // 检测企业微信环境
   useEffect(() => {
-    const ua = navigator.userAgent.toLowerCase();
-    const isWeComClient = ua.indexOf('wxwork') !== -1;
-    const isWeChatClient = ua.indexOf('micromessenger') !== -1;
-    
-    setIsInWeChat(isWeComClient);
-    setIsWeChat(isWeChatClient);
-    
-    // 如果不在企业微信中，显示提示页面
-    if (!isWeComClient) {
-      setShowWeComRequired(true);
-    }
+    const checkEnvironment = () => {
+      try {
+        // 确保在浏览器环境中
+        if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+          console.log('服务端渲染环境，跳过环境检测');
+          return;
+        }
+
+        const inWeChat = isInWeChatWork();
+        const isWeChatBrowser = /micromessenger/i.test(navigator.userAgent);
+        
+        console.log('企业微信环境检测:', { inWeChat, isWeChatBrowser });
+        
+        setIsInWeChat(inWeChat);
+        setIsWeChat(isWeChatBrowser);
+        
+        if (!inWeChat && !isWeChatBrowser) {
+          setShowWeComRequired(true);
+        }
+      } catch (err) {
+        console.error('环境检测失败:', err);
+        setError('环境检测失败');
+      }
+    };
+
+    // 延迟执行，确保在客户端环境中
+    const timer = setTimeout(checkEnvironment, 0);
+    return () => clearTimeout(timer);
   }, []);
 
-  // 初始化SDK
+  // 初始化企业微信SDK
   const initSDK = useCallback(async () => {
-    if (!isInWeChat) {
-      setError('不在企业微信环境中');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
+    if (isSDKReady) return;
 
     try {
-      // 获取当前页面URL
-      let currentUrl = typeof window !== 'undefined' ? window.location.href.split('#')[0] : '';
-      
-      // 调试信息 - 同时显示在控制台和页面上
-      const debugInfo = {
-        '当前页面完整URL': window.location.href,
-        '处理后用于签名的URL': currentUrl,
-        'URL参数': Object.fromEntries(new URLSearchParams(window.location.search)),
-        '页面路径': window.location.pathname,
-        '页面查询参数': window.location.search,
-        '页面hash': window.location.hash
-      };
-      
-      console.log('=== 前端URL调试信息 ===');
-      console.log('当前页面完整URL:', window.location.href);
-      console.log('处理后用于签名的URL:', currentUrl);
-      console.log('URL参数:', new URLSearchParams(window.location.search));
-      console.log('页面路径:', window.location.pathname);
-      console.log('页面查询参数:', window.location.search);
-      console.log('页面hash:', window.location.hash);
-      
-      // 将调试信息存储到全局变量，方便在页面上显示
-      (window as any).wechatDebugInfo = debugInfo;
-      
-      // 确保URL格式正确
-      try {
-        const urlObj = new URL(currentUrl);
-        // 移除不必要的参数，只保留必要的查询参数
-        const cleanUrl = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
-        console.log('清理后的URL:', cleanUrl);
-        currentUrl = cleanUrl;
-      } catch (e) {
-        console.warn('URL解析失败，使用原始URL:', e);
-      }
-      
-      console.log('最终发送给后端的URL:', currentUrl);
-      console.log('=== 前端调试信息结束 ===');
-      
-      // 获取企业微信配置
-      const configResponse = await wechatAPI.getConfig(currentUrl);
-      
-      if (!(configResponse as any).success) {
-        throw new Error((configResponse as any).error || '获取企业微信配置失败');
-      }
+      setLoading(true);
+      setError(null);
 
-      const config: WeChatConfig = configResponse.data;
-      
-      // 配置JS-SDK
-      await wechatSDK.configSDK(config);
-      
-      setIsConfigLoaded(true);
-      setIsSDKReady(true);
-      
-      console.log('企业微信SDK初始化成功');
+      // 获取当前页面URL
+      const currentUrl = window.location.href;
+      console.log('当前页面URL:', currentUrl);
+
+      // 获取企业微信配置
+      const configResponse = (await wechatAPI.getConfig(currentUrl)) as unknown as APIResponse<{
+        appId: string;
+        timestamp: number;
+        nonceStr: string;
+        signature: string;
+      }>;
+      console.log('企业微信配置响应:', configResponse);
+
+      if (configResponse.success && configResponse.data) {
+        const config: WeChatConfig = {
+          appId: configResponse.data.appId,
+          timestamp: configResponse.data.timestamp,
+          nonceStr: configResponse.data.nonceStr,
+          signature: configResponse.data.signature,
+        };
+
+        console.log('企业微信SDK配置:', config);
+
+        // 配置企业微信SDK
+        await wechatSDK.configSDK(config);
+        setIsSDKReady(true);
+        setIsConfigLoaded(true);
+        
+        console.log('企业微信SDK初始化成功');
+      } else {
+        throw new Error('获取企业微信配置失败');
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'SDK初始化失败';
       console.error('企业微信SDK初始化失败:', err);
-      
-      // 静默处理错误，不显示错误状态，让应用继续运行
-      // setError(errorMessage);
-      
-      // 设置一个静默失败状态，但不阻止应用运行
-      setIsConfigLoaded(false);
-      setIsSDKReady(false);
+      setError(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, [isInWeChat]);
+  }, [isSDKReady]);
 
   // 获取用户信息
-  const getUserInfo = useCallback(async () => {
-    if (!isInWeChat) {
-      setError('不在企业微信环境中');
-      return;
+  const getUserInfo = useCallback(async (code?: string) => {
+    if (!isSDKReady) {
+      throw new Error('企业微信SDK未就绪');
     }
 
-    setLoading(true);
-    setError(null);
-
     try {
-      // 不再需要传递code参数，API会自动从请求头获取
-      const response = await wechatAPI.getUserInfo();
-      
-      if (!(response as any).success) {
-        throw new Error((response as any).error || '获取用户信息失败');
-      }
+      setLoading(true);
+      setError(null);
 
-      setUserInfo(response.data);
-      console.log('用户信息获取成功:', response.data);
+      const userInfoResponse = (await wechatAPI.getUserInfo()) as unknown as APIResponse<WeChatUserInfo>;
+      console.log('用户信息响应:', userInfoResponse);
+
+      if (userInfoResponse.success && userInfoResponse.data) {
+        setUserInfo(userInfoResponse.data);
+        console.log('用户信息获取成功:', userInfoResponse.data);
+      } else {
+        throw new Error('获取用户信息失败');
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '获取用户信息失败';
-      setError(errorMessage);
       console.error('获取用户信息失败:', err);
+      setError(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, [isInWeChat]);
+  }, [isSDKReady]);
 
   // 分享到聊天
   const shareToChat = useCallback(async (options: {
@@ -246,9 +240,28 @@ export function useWeChat(): UseWeChatReturn {
         getUserInfo();
       });
     } else {
-      // 没有code，自动跳转到授权页面
-      console.log('没有code参数，自动跳转到授权页面');
-      window.location.href = '/api/oauth/url';
+      // 没有code，获取授权URL并跳转
+      console.log('没有code参数，获取授权URL并跳转');
+      wechatAPI.getOAuthUrl()
+        .then((response) => {
+          const oauthResponse = response as unknown as APIResponse<{
+            oauth_url: string;
+            redirect_uri: string;
+            state: string;
+          }>;
+          console.log('获取到授权URL响应:', oauthResponse);
+          if (oauthResponse.success && oauthResponse.data.oauth_url) {
+            console.log('跳转到企业微信授权页面:', oauthResponse.data.oauth_url);
+            window.location.href = oauthResponse.data.oauth_url;
+          } else {
+            console.error('获取授权URL失败:', oauthResponse);
+            setError('获取授权链接失败');
+          }
+        })
+        .catch((error) => {
+          console.error('获取授权URL出错:', error);
+          setError('获取授权链接失败');
+        });
     }
   }, [isInWeChat, initSDK, getUserInfo]);
 

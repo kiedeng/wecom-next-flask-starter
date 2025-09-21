@@ -7,7 +7,10 @@ export function cn(...inputs: ClassValue[]) {
 
 // 检查是否在企业微信环境中
 export function isInWeChatWork(): boolean {
-  if (typeof window === 'undefined') return false;
+  // 确保在浏览器环境中
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return false;
+  }
   
   try {
     const userAgent = navigator.userAgent || '';
