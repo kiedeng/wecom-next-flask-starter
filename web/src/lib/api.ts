@@ -2,6 +2,17 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+// 环境变量检查
+if (typeof window !== 'undefined') {
+  console.log('API_BASE_URL:', API_BASE_URL);
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  
+  // 检查API URL是否可访问
+  if (API_BASE_URL === 'http://localhost:5000' && process.env.NODE_ENV === 'production') {
+    console.warn('警告: 生产环境使用默认API地址，请设置正确的 NEXT_PUBLIC_API_URL');
+  }
+}
+
 // 创建axios实例
 const api = axios.create({
   baseURL: API_BASE_URL,

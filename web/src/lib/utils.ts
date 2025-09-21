@@ -8,7 +8,17 @@ export function cn(...inputs: ClassValue[]) {
 // 检查是否在企业微信环境中
 export function isInWeChatWork(): boolean {
   if (typeof window === 'undefined') return false;
-  return /wxwork/i.test(navigator.userAgent);
+  
+  try {
+    const userAgent = navigator.userAgent || '';
+    console.log('User Agent:', userAgent);
+    const isWxWork = /wxwork/i.test(userAgent);
+    console.log('是否在企业微信中:', isWxWork);
+    return isWxWork;
+  } catch (error) {
+    console.error('企业微信环境检测失败:', error);
+    return false;
+  }
 }
 
 // 获取URL参数
